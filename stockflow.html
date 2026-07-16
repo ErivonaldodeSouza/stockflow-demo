@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockFlow - Inteligência Logística para Estoques</title>
+  <style>
+    :root {
+      --blue-dark: #0B4F6C;
+      --blue-light: #4EA5D9;
+      --white: #FFFFFF;
+      --gray-light: #F5F7FA;
+      --text-dark: #1F2933;
+      --text-muted: #7B8794;
+      --border: #E4E7EB;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #e0f2ff 0, #f5f7fa 40%, #e3ecf5 100%);
+      color: var(--text-dark);
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell {
+        grid-template-columns: 70px minmax(0, 1fr);
+      }
+      .sidebar-label {
+        display: none;
+      }
+      .sidebar-header h1 {
+        display: none;
+      }
+      .sidebar-header span {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell {
+        grid-template-columns: 0 minmax(0, 1fr);
+      }
+      .sidebar {
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: 64px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-inline: 20px;
+        border-radius: 0;
+      }
+      .sidebar-nav {
+        display: flex;
+        gap: 16px;
+      }
+      .main {
+        padding-top: 80px;
+      }
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #0B4F6C 0%, #062D3C 100%);
+      color: #E4FBFF;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      border-right: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.45);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 0 0, #4EA5D9 0, #0B4F6C 40%, #02151E 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #F9FBFF;
+      font-weight: 600;
+      font-size: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-mark::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .sidebar-header h1 {
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .sidebar-header span {
+      display: block;
+      font-size: 11px;
+      color: rgba(226, 239, 255, 0.75);
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(216, 235, 255, 0.7);
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      color: rgba(226, 239, 255, 0.86);
+      font-size: 13px;
+      transition: background 0.16s ease, transform 0.14s ease, border-color 0.16s ease;
+      background: none;
+    }
+
+    .nav-item:hover {
+      background: rgba(10, 74, 100, 0.92);
+      border-color: rgba(148, 163, 184, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(90deg, #4EA5D9 0%, #2f88bf 55%, #0B4F6C 100%);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.45);
+      color: #02151E;
+      font-weight: 600;
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.32);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .nav-item.active .nav-icon {
+      background: rgba(3, 9, 16, 0.16);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 11px;
+      color: rgba(210, 232, 255, 0.85);
+    }
+
+    .sidebar-pill {
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(191, 219, 254, 0.55);
+      background: radial-gradient(circle at 0 0, rgba(148, 198, 255, 0.16), rgba(9, 31, 45, 0.95));
+    }
+
+    .sidebar-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.18);
+    }
+
+    .main {
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .top-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .top-title h2 {
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .top-title span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(6px);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #4EA5D9, #0B4F6C);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-shell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      padding: 3px 10px;
+      border: 1px solid rgba(209, 213, 219, 0.8);
+      box-shadow: 0 12px 30px rgba(148, 163, 184, 0.25);
+      max-width: 340px;
+      flex: 1;
+    }
+
+    .search-shell input {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 13px;
+      flex: 1;
+    }
+
+    .search-shell span {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.14s ease, background 0.16s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0B4F6C, #4EA5D9);
+      color: #F9FBFF;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(15, 23, 42, 0.5);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--text-dark);
+      border: 1px solid rgba(209, 213, 219, 0.9);
+    }
+
+    .btn-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.25);
+    }
+
+    .layout-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .layout-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .surface {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      padding: 16px 16px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .surface-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .surface-header h3 {
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+
+    .surface-header span {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(209, 213, 219, 0.9);
+      background: rgba(248, 250, 252, 0.95);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #4EA5D9;
+    }
+
+    .indicator-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .indicator-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .indicator-card {
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: radial-gradient(circle at 0 0, rgba(209, 250, 255, 0.7), rgba(248, 249, 252, 1));
+      padding: 10px 11px 9px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+
+    .indicator-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      pointer-events: none;
+    }
+
+    .indicator-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .indicator-value {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .indicator-trend {
+      font-size: 11px;
+      color: #16a34a;
+    }
+
+    .indicator-spark {
+      height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.12), rgba(37, 99, 235, 0.02));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .indicator-spark-fill {
+      position: absolute;
+      inset: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4EA5D9, #0B4F6C);
+      width: 65%;
+    }
+
+    .primary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .primary-actions .btn {
+      padding-inline: 13px;
+      font-size: 12px;
+    }
+
+    .recommendation {
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: linear-gradient(135deg, rgba(14, 116, 150, 0.08), rgba(248, 249, 252, 0.98));
+      padding: 11px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .recommendation-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+    }
+
+    .recommendation-content {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .recommendation-highlight {
+      color: #0B4F6C;
+      font-weight: 600;
+    }
+
+    .tabs-shell {
+      display: flex;
+      border-radius: 999px;
+      background: rgba(248, 250, 252, 0.9);
+      padding: 3px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      gap: 3px;
+    }
+
+    .tab-pill {
+      flex: 1;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 11px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease;
+    }
+
+    .tab-pill.active {
+      background: linear-gradient(135deg, #0B4F6C, #4EA5D9);
+      color: #F9FBFF;
+      font-weight: 500;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.4);
+    }
+
+    .map-shell {
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: radial-gradient(circle at 0 0, #eff6ff, #f8fafc);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .map-legend {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .legend-items {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .map-grid {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .map-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .mini-map {
+      border-radius: 12px;
+      background: #0f172a;
+      padding: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mini-map-inner {
+      border-radius: 10px;
+      background-image:
+        linear-gradient(90deg, rgba(15, 23, 42, 0.75) 0, rgba(15, 23, 42, 0.92) 16%, rgba(15, 23, 42, 0.96) 100%),
+        radial-gradient(circle at 10% 0, rgba(148, 163, 184, 0.18), transparent 52%),
+        radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.25), transparent 50%);
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-auto-rows: 16px;
+      gap: 4px;
+      position: relative;
+    }
+
+    .map-cell {
+      border-radius: 4px;
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(30, 64, 175, 0.55);
+    }
+
+    .map-cell.aisle {
+      background: transparent;
+      border-style: dashed;
+      border-color: rgba(51, 65, 85, 0.65);
+    }
+
+    .map-cell.entrance {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: rgba(74, 222, 128, 0.9);
+    }
+
+    .map-cell.shipping {
+      background: linear-gradient(135deg, #0EA5E9, #4EA5D9);
+      border-color: rgba(56, 189, 248, 0.95);
+    }
+
+    .map-cell.route {
+      background: radial-gradient(circle at 50% 0, rgba(56, 189, 248, 0.25), transparent 60%);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.65);
+      position: relative;
+    }
+
+    .route-line {
+      position: absolute;
+      inset: 3px;
+      border-radius: 999px;
+      border: 2px solid rgba(56, 189, 248, 0.8);
+      border-style: dashed;
+    }
+
+    .map-pointer {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #F9FAFB;
+      border: 2px solid #4EA5D9;
+      box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.18);
+      transform: translate(-50%, -50%);
+      top: 50%;
+      left: 22%;
+    }
+
+    .map-kpi {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: #E5E7EB;
+      font-size: 11px;
+    }
+
+    .map-kpi-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .heatmap-shell {
+      border-radius: 12px;
+      background: #020617;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-auto-rows: 14px;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .heat-cell {
+      border-radius: 4px;
+      background: radial-gradient(circle at 30% 0, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.95));
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.85);
+      position: relative;
+    }
+
+    .heat-cell.hot {
+      background: radial-gradient(circle at 30% 0, rgba(248, 113, 113, 0.35), rgba(127, 29, 29, 0.95));
+      box-shadow: 0 0 18px rgba(248, 113, 113, 0.7);
+    }
+
+    .heat-cell.warm {
+      background: radial-gradient(circle at 30% 0, rgba(251, 191, 36, 0.38), rgba(120, 53, 15, 0.96));
+      box-shadow: 0 0 14px rgba(250, 204, 21, 0.65);
+    }
+
+    .heat-cell.cool {
+      background: radial-gradient(circle at 30% 0, rgba(56, 189, 248, 0.38), rgba(8, 47, 73, 0.96));
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+    }
+
+    .heat-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 0, rgba(248, 250, 252, 0.05), transparent 50%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .heat-legend {
+      position: absolute;
+      inset: auto 10px 10px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #E5E7EB;
+    }
+
+    .heat-scale {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .heat-scale-bar {
+      height: 6px;
+      width: 80px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #facc15, #f97316, #ef4444);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .split {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .table thead {
+      background: #F5F7FA;
+    }
+
+    .table th,
+    .table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #E4E7EB;
+      text-align: left;
+    }
+
+    .table th {
+      font-weight: 500;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(248, 250, 252, 0.95);
+      color: var(--text-muted);
+    }
+
+    .tag-positive {
+      color: #16a34a;
+      border-color: rgba(22, 163, 74, 0.4);
+      background: rgba(22, 163, 74, 0.08);
+    }
+
+    .tag-negative {
+      color: #b91c1c;
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(248, 113, 113, 0.08);
+    }
+
+    .route-alert {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      border-radius: 10px;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      font-size: 11px;
+      color: #92400e;
+    }
+
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(209, 213, 219, 0.9);
+      background: rgba(248, 250, 252, 0.98);
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: rgba(14, 116, 150, 0.12);
+      border-color: rgba(14, 116, 150, 0.9);
+      color: #0B4F6C;
+      font-weight: 500;
+    }
+
+    .kpi-large {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .kpi-large {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-large {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .kpi-tile {
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: linear-gradient(135deg, rgba(14, 116, 150, 0.06), rgba(248, 249, 252, 0.98));
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kpi-tile-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-tile-value {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .tiny-chart {
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(56, 189, 248, 0.1));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tiny-chart-fill {
+      position: absolute;
+      inset: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0B4F6C, #4EA5D9);
+      width: 52%;
+    }
+
+    .subcopy {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .compare-shell {
+      border-radius: 12px;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      background: rgba(248, 250, 252, 0.9);
+      padding: 9px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .compare-tag {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.08);
+      color: #0B4F6C;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      font-size: 10px;
+    }
+
+    .section-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .section-heading h4 {
+      font-size: 14px;
+    }
+
+    .section-heading span {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .route-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .route-form {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .field label {
+      color: var(--text-muted);
+    }
+
+    .field input,
+    .field select {
+      border-radius: 999px;
+      border: 1px solid rgba(209, 213, 219, 0.9);
+      padding: 5px 10px;
+      font-size: 12px;
+      background: rgba(248, 250, 252, 0.98);
+    }
+
+    .screen-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .metric-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .metric-tile {
+      border-radius: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: rgba(248, 249, 252, 0.98);
+      padding: 8px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .spark-bar {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(226, 232, 240, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .spark-fill {
+      position: absolute;
+      inset: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0EA5E9, #4EA5D9);
+      width: 68%;
+    }
+
+    .ai-callout {
+      border-radius: 12px;
+      border: 1px solid rgba(186, 230, 253, 0.95);
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.12), rgba(248, 250, 252, 0.98));
+      padding: 9px 10px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 800px) {
+      .ai-callout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .ai-callout-title {
+      font-weight: 600;
+      color: #0B4F6C;
+      margin-bottom: 4px;
+    }
+
+    .ai-callout-body {
+      color: var(--text-muted);
+    }
+
+    .ai-callout-kpi {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .ai-callout-kpi div {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .ai-callout-kpi span:first-child {
+      color: var(--text-muted);
+    }
+
+    .ai-callout-kpi span:last-child {
+      font-weight: 600;
+    }
+
+    .ai-callout-footer {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .screen-hero-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .screen-hero-text strong {
+      color: #0B4F6C;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-mark">SF</div>
+        <div>
+          <h1>StockFlow</h1>
+          <span>Inteligência logística operacional</span>
+        </div>
+      </div>
+      <div>
+        <div class="sidebar-section-label sidebar-label">Navegação</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-screen="dashboard">
+            <span class="nav-icon">🏠</span>
+            <span class="sidebar-label">Dashboard</span>
+          </button>
+          <button class="nav-item" data-screen="busca">
+            <span class="nav-icon">🔍</span>
+            <span class="sidebar-label">Buscar Produto</span>
+          </button>
+          <button class="nav-item" data-screen="navegacao">
+            <span class="nav-icon">🧭</span>
+            <span class="sidebar-label">Navegação</span>
+          </button>
+          <button class="nav-item" data-screen="waze">
+            <span class="nav-icon">⚠️</span>
+            <span class="sidebar-label">Heatmap & Waze</span>
+          </button>
+          <button class="nav-item" data-screen="ia">
+            <span class="nav-icon">🤖</span>
+            <span class="sidebar-label">Inteligência Artificial</span>
+          </button>
+          <button class="nav-item" data-screen="gestao">
+            <span class="nav-icon">📊</span>
+            <span class="sidebar-label">Gestão Estratégica</span>
+          </button>
+        </nav>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-pill">
+          <div class="sidebar-status">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <div class="status-dot"></div>
+                <span style="font-size:11px;">Camada ativa sobre o WMS</span>
+              </div>
+              <span style="font-size:11px;">WMS controla o estoque. StockFlow aprende com o estoque.</span>
+            </div>
+            <div style="font-size:10px;text-align:right;">
+              <div>Deslocamento médio</div>
+              <div style="font-weight:600;">-18% hoje</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;opacity:0.8;">
+          Versão demo • Dados fictícios para validação com investidores.
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="top-title">
+            <h2>Inteligência Logística para Estoques</h2>
+            <span>Camada de navegação inteligente acima do seu WMS.</span>
+          </div>
+          <div class="pill">
+            <div class="pill-dot"></div>
+            <span>Operação em tempo real</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="search-shell">
+            <span>🔎</span>
+            <input id="global-search" placeholder="Buscar produto..." />
+            <span style="font-size:10px;color:#9fa6b2;">Argamassa AC3, Cimento CP II...</span>
+          </div>
+          <button class="btn btn-primary" id="cta-demo">
+            <span class="btn-icon">◎</span>
+            Agendar demonstração
+          </button>
+        </div>
+      </header>
+
+      <!-- Tela 1 - Dashboard Inicial -->
+      <section id="screen-dashboard" class="screen active">
+        <div class="layout-grid">
+          <div class="surface">
+            <div class="surface-header">
+              <div>
+                <h3>Visão geral operacional</h3>
+                <span>Monitoramento em tempo real da navegação de estoque.</span>
+              </div>
+              <div class="badge">
+                <div class="badge-dot"></div>
+                <span>Hoje • Operação estável</span>
+              </div>
+            </div>
+            <div class="indicator-grid">
+              <div class="indicator-card">
+                <div class="indicator-label">
+                  <span>Produtos localizados hoje</span>
+                  <span class="tag">picking</span>
+                </div>
+                <div class="indicator-value">
+                  <span>1.284</span>
+                  <span class="indicator-trend">+12%</span>
+                </div>
+                <div class="indicator-spark">
+                  <div class="indicator-spark-fill" style="width:72%;"></div>
+                </div>
+              </div>
+              <div class="indicator-card">
+                <div class="indicator-label">
+                  <span>Rotas concluídas</span>
+                  <span class="tag">mapa</span>
+                </div>
+                <div class="indicator-value">
+                  <span>839</span>
+                  <span class="indicator-trend">+9%</span>
+                </div>
+                <div class="indicator-spark">
+                  <div class="indicator-spark-fill" style="width:64%;"></div>
+                </div>
+              </div>
+              <div class="indicator-card">
+                <div class="indicator-label">
+                  <span>Alertas ativos</span>
+                  <span class="tag-negative">3 bloqueios</span>
+                </div>
+                <div class="indicator-value">
+                  <span>12</span>
+                  <span style="font-size:11px;color:#b91c1c;">+4 hoje</span>
+                </div>
+                <div class="indicator-spark">
+                  <div class="indicator-spark-fill" style="width:32%;background:linear-gradient(90deg,#ef4444,#f97316);"></div>
+                </div>
+              </div>
+              <div class="indicator-card">
+                <div class="indicator-label">
+                  <span>Eficiência operacional</span>
+                  <span class="tag-positive">IEE 0,82</span>
+                </div>
+                <div class="indicator-value">
+                  <span>+18%</span>
+                  <span style="font-size:11px;color:#16a34a;">vs. semana passada</span>
+                </div>
+                <div class="indicator-spark">
+                  <div class="indicator-spark-fill" style="width:86%;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="section-row">
+              <div class="section-heading">
+                <h4>Ações rápidas</h4>
+                <span>Construa o fluxo completo de navegação com um clique.</span>
+              </div>
+              <div class="primary-actions">
+                <button class="btn btn-primary" data-screen-link="busca">
+                  <span class="btn-icon">🔍</span>
+                  Buscar Produto
+                </button>
+                <button class="btn btn-ghost" data-screen-link="navegacao">
+                  <span class="btn-icon">🧭</span>
+                  Ver Mapa
+                </button>
+                <button class="btn btn-ghost" data-screen-link="waze">
+                  <span class="btn-icon">⚠️</span>
+                  Reportar Problema
+                </button>
+                <button class="btn btn-ghost" data-screen-link="ia">
+                  <span class="btn-icon">🤖</span>
+                  Dashboard IA
+                </button>
+              </div>
+              <div class="recommendation">
+                <div class="recommendation-label">Recomendação inteligente</div>
+                <div class="recommendation-content">
+                  A IA identificou que <span class="recommendation-highlight">Argamassa AC3</span> e <span class="recommendation-highlight">Cimento CP II</span> são retirados juntos em 82% dos pedidos.
+                  Recomenda-se reposicionamento para reduzir deslocamentos em aproximadamente <span class="recommendation-highlight">18%</span>.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="surface">
+            <div class="surface-header">
+              <div>
+                <h3>Mapa de navegação em tempo real</h3>
+                <span>Visual semelhante ao Google Maps, adaptado para corredores e estantes.</span>
+              </div>
+              <div class="tabs-shell">
+                <button class="tab-pill active">Rotas</button>
+                <button class="tab-pill">Heatmap</button>
+                <button class="tab-pill">Alertas</button>
+              </div>
+            </div>
+            <div class="map-shell">
+              <div class="map-legend">
+                <div class="legend-items">
+                  <div class="legend-item">
+                    <div class="legend-swatch" style="background:#22c55e;"></div>
+                    <span>Entrada</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-swatch" style="background:#4EA5D9;"></div>
+                    <span>Expedição</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-swatch" style="background:linear-gradient(90deg,#22c55e,#4EA5D9);"></div>
+                    <span>Rota ativa</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span>Distância total: <strong>142 m</strong></span>
+                  <span>Tempo estimado: <strong>2 min</strong></span>
+                </div>
+              </div>
+              <div class="map-grid">
+                <div class="mini-map">
+                  <div class="mini-map-inner">
+                    <div class="map-cell entrance"></div>
+                    <div class="map-cell aisle"></div>
+                    <div class="map-cell aisle"></div>
+                    <div class="map-cell aisle"></div>
+                    <div class="map-cell shipping"></div>
+
+                    <div class="map-cell route"><div class="route-line"></div></div>
+                    <div class="map-cell aisle"></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell route"><div class="route-line"></div></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell route"><div class="route-line"></div></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell route"><div class="route-line"></div></div>
+                    <div class="map-cell"></div>
+                    <div class="map-cell"></div>
+                  </div>
+                  <div class="map-pointer"></div>
+                  <div class="map-kpi" style="margin-top:8px;">
+                    <div class="map-kpi-line">
+                      <span>Colaborador atual</span>
+                      <span style="font-weight:600;">Rota #839-A</span>
+                    </div>
+                    <div class="map-kpi-line">
+                      <span>Produto selecionado</span>
+                      <span style="font-weight:600;">Argamassa AC3 • Rua B03</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="heatmap-shell">
+                  <div class="heat-overlay"></div>
+                  <!-- Heat cells -->
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell cool"></div>
+
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell cool"></div>
+
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell cool"></div>
+
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell cool"></div>
+
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell cool"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell warm"></div>
+                  <div class="heat-cell hot"></div>
+                  <div class="heat-cell cool"></div>
+
+                  <div class="heat-legend">
+                    <div class="heat-scale">
+                      <span>Fluxo baixo</span>
+                      <div class="heat-scale-bar"></div>
+                      <span>Fluxo alto</span>
+                    </div>
+                    <div>Corredor B e C mais congestionados hoje.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela 2 - Busca Inteligente -->
+      <section id="screen-busca" class="screen">
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Busca inteligente de produtos</h3>
+              <span>Localize qualquer item com contexto de rota e tempo.</span>
+            </div>
+            <div class="badge">
+              <div class="badge-dot"></div>
+              <span>Integração direta com WMS</span>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="section-heading">
+              <h4>Pesquisar produto</h4>
+              <span>Exemplo: Argamassa AC3</span>
+            </div>
+            <div class="split">
+              <div>
+                <div class="search-shell" style="box-shadow:none;max-width:none;margin-bottom:10px;">
+                  <span>🔎</span>
+                  <input id="product-search" placeholder="Digite o nome ou código..." />
+                  <span style="font-size:10px;color:#9fa6b2;">Enter para buscar</span>
+                </div>
+                <div class="screen-hero-text">
+                  StockFlow se conecta ao seu WMS, enriquece os dados de localização com tempo de deslocamento, distância e rotas ideais do colaborador até o produto.
+                </div>
+              </div>
+              <div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Campo</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Nome do produto</td>
+                      <td>Argamassa AC3 • 20kg</td>
+                    </tr>
+                    <tr>
+                      <td>Rua</td>
+                      <td>B03</td>
+                    </tr>
+                    <tr>
+                      <td>Prateleira</td>
+                      <td>Estante 07</td>
+                    </tr>
+                    <tr>
+                      <td>Nível</td>
+                      <td>Nível 02 (altura de picking)</td>
+                    </tr>
+                    <tr>
+                      <td>Quantidade disponível</td>
+                      <td>124 unidades</td>
+                    </tr>
+                    <tr>
+                      <td>Distância até o produto</td>
+                      <td>37 m</td>
+                    </tr>
+                    <tr>
+                      <td>Tempo estimado de deslocamento</td>
+                      <td>28 segundos</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
+              <button class="btn btn-primary" data-screen-link="navegacao">
+                <span class="btn-icon">▶</span>
+                Iniciar rota até Argamassa AC3
+              </button>
+              <div class="compare-shell">
+                <span>WMS informa onde o produto está. StockFlow indica como chegar lá no menor tempo possível.</span>
+                <span class="compare-tag">Camada de navegação acima do WMS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela 3 - Navegação no Estoque -->
+      <section id="screen-navegacao" class="screen">
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Navegação no estoque</h3>
+              <span>Mapa visual com corredores, estantes, entrada e expedição.</span>
+            </div>
+            <div class="badge">
+              <div class="badge-dot"></div>
+              <span>Visual inspirado em Google Maps</span>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="section-heading">
+              <h4>Rota até Argamassa AC3</h4>
+              <span>Posição atual do colaborador e caminho inteligente até o produto.</span>
+            </div>
+            <div class="split">
+              <div class="mini-map" style="margin-top:4px;">
+                <div class="mini-map-inner" style="grid-auto-rows:18px;">
+                  <div class="map-cell entrance"></div>
+                  <div class="map-cell aisle"></div>
+                  <div class="map-cell aisle"></div>
+                  <div class="map-cell aisle"></div>
+                  <div class="map-cell shipping"></div>
+
+                  <div class="map-cell route"><div class="route-line"></div></div>
+                  <div class="map-cell route"><div class="route-line"></div></div>
+                  <div class="map-cell route"><div class="route-line"></div></div>
+                  <div class="map-cell route"><div class="route-line"></div></div>
+                  <div class="map-cell route"><div class="route-line"></div></div>
+
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                  <div class="map-cell"></div>
+                </div>
+                <div class="map-pointer" style="top:36%;left:18%;"></div>
+                <div class="map-kpi" style="margin-top:8px;color:#E5E7EB;">
+                  <div class="map-kpi-line">
+                    <span>Distância total</span>
+                    <span style="font-weight:600;">142 m</span>
+                  </div>
+                  <div class="map-kpi-line">
+                    <span>Tempo estimado</span>
+                    <span style="font-weight:600;">2 min</span>
+                  </div>
+                  <div class="map-kpi-line">
+                    <span>Modo de navegação</span>
+                    <span style="font-weight:600;">Picking otimizado (rota multi-pedido)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="section-row">
+                <div class="section-heading">
+                  <h4>Detalhes da rota</h4>
+                  <span>Sequência de pontos no estoque.</span>
+                </div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Passo</th>
+                      <th>Descrição</th>
+                      <th>Distância</th>
+                      <th>Tempo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td>Sair da área de entrada e seguir pelo corredor A.</td>
+                      <td>24 m</td>
+                      <td>18 s</td>
+                    </tr>
+                    <tr>
+                      <td>2</td>
+                      <td>Virar à direita na Rua B01 e seguir até a B03.</td>
+                      <td>63 m</td>
+                      <td>50 s</td>
+                    </tr>
+                    <tr>
+                      <td>3</td>
+                      <td>Aproximar-se da Estante 07, nível 02.</td>
+                      <td>39 m</td>
+                      <td>32 s</td>
+                    </tr>
+                    <tr>
+                      <td>4</td>
+                      <td>Confirmar leitura de código e seguir para próximo item.</td>
+                      <td>16 m</td>
+                      <td>20 s</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="route-alert" style="margin-top:8px;">
+                  <span>⚠️</span>
+                  <span>Rota recalculada devido a bloqueio no corredor C. Tempo de deslocamento ajustado automaticamente.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela 4 & 5 - Waze do Estoque + Mapa de Calor -->
+      <section id="screen-waze" class="screen">
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Waze do estoque & Heatmap</h3>
+              <span>Reportes de bloqueio e visualização de corredores mais movimentados.</span>
+            </div>
+            <div class="badge">
+              <div class="badge-dot"></div>
+              <span>Rotas recalculadas automaticamente</span>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="section-heading">
+              <h4>Reportar problema</h4>
+              <span>Transforme movimentações diárias em sinais estratégicos.</span>
+            </div>
+            <div class="route-form">
+              <div class="field">
+                <label>Tipo de problema</label>
+                <select>
+                  <option>Corredor bloqueado</option>
+                  <option>Produto fora do local</option>
+                  <option>Obstrução</option>
+                  <option>Risco operacional</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Local</label>
+                <input placeholder="Ex: Corredor C • Rua C05" />
+              </div>
+              <div class="field">
+                <label>Impacto percebido</label>
+                <select>
+                  <option>Baixo</option>
+                  <option>Médio</option>
+                  <option>Alto</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Observações</label>
+                <input placeholder="Descrever brevemente o problema" />
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:10px;">
+              <button class="btn btn-primary">
+                <span class="btn-icon">⚡</span>
+                Registrar problema e recalcular rotas
+              </button>
+              <div class="route-alert">
+                <span>🔄</span>
+                <span>Rota recalculada devido a bloqueio. Corredor C marcado como área de atenção no mapa.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Mapa de calor do estoque</h3>
+              <span>Corredores mais movimentados e áreas congestionadas.</span>
+            </div>
+            <div class="chip-group">
+              <button class="chip active">Fluxo de picking</button>
+              <button class="chip">Reposição</button>
+              <button class="chip">Devoluções</button>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="split">
+              <div class="heatmap-shell" style="height:160px;">
+                <div class="heat-overlay"></div>
+                <!-- Heat cells simplified -->
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell cool"></div>
+
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell cool"></div>
+
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell cool"></div>
+
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell cool"></div>
+
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell cool"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell warm"></div>
+                <div class="heat-cell hot"></div>
+                <div class="heat-cell cool"></div>
+
+                <div class="heat-legend">
+                  <div class="heat-scale">
+                    <span>Baixa movimentação</span>
+                    <div class="heat-scale-bar"></div>
+                    <span>Alta movimentação</span>
+                  </div>
+                  <div>Corredores B e C respondem por 64% das retiradas hoje.</div>
+                </div>
+              </div>
+              <div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Corredor</th>
+                      <th>Retiradas</th>
+                      <th>Congestionamento</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Corredor A</td>
+                      <td>124</td>
+                      <td><span class="tag">baixo</span></td>
+                    </tr>
+                    <tr>
+                      <td>Corredor B</td>
+                      <td>483</td>
+                      <td><span class="tag-negative">alto</span></td>
+                    </tr>
+                    <tr>
+                      <td>Corredor C</td>
+                      <td>417</td>
+                      <td><span class="tag-negative">alto</span></td>
+                    </tr>
+                    <tr>
+                      <td>Corredor D</td>
+                      <td>89</td>
+                      <td><span class="tag">baixo</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela 6 - Dashboard de IA -->
+      <section id="screen-ia" class="screen">
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Dashboard de Inteligência Artificial</h3>
+              <span>A IA aprende com cada movimentação para sugerir o layout ideal.</span>
+            </div>
+            <div class="badge">
+              <div class="badge-dot"></div>
+              <span>Mode: Recomendações ativas</span>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="section-heading">
+              <h4>Análise de Argamassa AC3</h4>
+              <span>Dados consolidados da última semana.</span>
+            </div>
+            <div class="split">
+              <div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Métrica</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Retiradas semanais</td>
+                      <td>483</td>
+                    </tr>
+                    <tr>
+                      <td>Distância acumulada</td>
+                      <td>2,4 km</td>
+                    </tr>
+                    <tr>
+                      <td>Tempo médio de deslocamento</td>
+                      <td>28 segundos</td>
+                    </tr>
+                    <tr>
+                      <td>Produtos frequentemente retirados juntos</td>
+                      <td>Argamassa AC3 + Cimento CP II (82% dos pedidos)</td>
+                    </tr>
+                    <tr>
+                      <td>Posição atual</td>
+                      <td>Rua B03 • Estante 07 • Nível 02</td>
+                    </tr>
+                    <tr>
+                      <td>Economia potencial de reposicionamento</td>
+                      <td>18% em deslocamentos</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="section-row">
+                <div class="ai-callout">
+                  <div>
+                    <div class="ai-callout-title">Sugestão da IA: Mover Argamassa AC3 para Rua B03</div>
+                    <div class="ai-callout-body">
+                      Com base em 483 retiradas semanais e 82% de correlação com Cimento CP II, a IA recomenda reposicionar Argamassa AC3 para uma área de maior fluxo próximo à expedição.
+                    </div>
+                  </div>
+                  <div>
+                    <div class="ai-callout-kpi">
+                      <div>
+                        <span>Economia estimada</span>
+                        <span>18% em deslocamentos</span>
+                      </div>
+                      <div>
+                        <span>Impacto em produtividade</span>
+                        <span>+11% picks/hora</span>
+                      </div>
+                    </div>
+                    <div class="ai-callout-footer" style="margin-top:6px;">
+                      Ao confirmar esta ação, StockFlow passa a monitorar o efeito do novo layout e ajusta o índice de eficiência espacial (IEE) automaticamente.
+                    </div>
+                  </div>
+                </div>
+                <div class="screen-hero-text" style="margin-top:8px;">
+                  Diferente de um WMS tradicional, que apenas registra onde os produtos estão, <strong>StockFlow</strong> pensa o estoque como um mapa vivo: aprende com cada rota, recalcula caminhos e transforma dados em decisões de layout contínuas.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela 7 - Gestão Estratégica -->
+      <section id="screen-gestao" class="screen">
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Gestão estratégica de estoque</h3>
+              <span>Painel executivo para gestores, líderes de operação e inovação.</span>
+            </div>
+            <div class="badge">
+              <div class="badge-dot"></div>
+              <span>Visão consolidada • Últimos 7 dias</span>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="section-heading">
+              <h4>Indicadores chave</h4>
+              <span>Resumo da eficiência espacial e de movimentação.</span>
+            </div>
+            <div class="kpi-large">
+              <div class="kpi-tile">
+                <div class="kpi-tile-label">
+                  <span>Distância total percorrida</span>
+                  <span class="tag">picking</span>
+                </div>
+                <div class="kpi-tile-value">
+                  <span>32,7 km</span>
+                  <span style="font-size:11px;color:#16a34a;">-6,3 km vs. semana anterior</span>
+                </div>
+                <div class="tiny-chart">
+                  <div class="tiny-chart-fill" style="width:68%;"></div>
+                </div>
+              </div>
+              <div class="kpi-tile">
+                <div class="kpi-tile-label">
+                  <span>Tempo médio de separação</span>
+                  <span class="tag">por pedido</span>
+                </div>
+                <div class="kpi-tile-value">
+                  <span>3 min 21 s</span>
+                  <span style="font-size:11px;color:#16a34a;">-24 s</span>
+                </div>
+                <div class="tiny-chart">
+                  <div class="tiny-chart-fill" style="width:52%;"></div>
+                </div>
+              </div>
+              <div class="kpi-tile">
+                <div class="kpi-tile-label">
+                  <span>Índice de Eficiência Espacial (IEE)</span>
+                  <span class="tag-positive">em alta</span>
+                </div>
+                <div class="kpi-tile-value">
+                  <span>0,82</span>
+                  <span style="font-size:11px;color:#16a34a;">+0,09 pts</span>
+                </div>
+                <div class="tiny-chart">
+                  <div class="tiny-chart-fill" style="width:84%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="surface">
+          <div class="surface-header">
+            <div>
+              <h3>Produtos e corredores em destaque</h3>
+              <span>Identifique onde a operação ganha ou perde tempo.</span>
+            </div>
+            <div class="chip-group">
+              <button class="chip active">Produtos mais retirados</button>
+              <button class="chip">Produtos mais lentos</button>
+              <button class="chip">Corredores mais congestionados</button>
+            </div>
+          </div>
+          <div class="section-row">
+            <div class="metric-grid">
+              <div class="metric-tile">
+                <div class="metric-label">Produtos mais retirados</div>
+                <div class="metric-value">Argamassa AC3 • 483 picks/semana</div>
+                <div class="metric-sub">Seguido por Cimento CP II (412 picks).</div>
+                <div class="spark-bar"><div class="spark-fill" style="width:78%;"></div></div>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">Produtos mais lentos para localizar</div>
+                <div class="metric-value">Tubos PVC Linha X • 1 min 44 s</div>
+                <div class="metric-sub">Localizados em área de baixa visibilidade, afastada da expedição.</div>
+                <div class="spark-bar"><div class="spark-fill" style="width:34%;background:linear-gradient(90deg,#ef4444,#f97316);"></div></div>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">Corredores mais congestionados</div>
+                <div class="metric-value">B e C • 64% das rotas</div>
+                <div class="metric-sub">Recomendada redistribuição de itens de alta rotatividade.</div>
+                <div class="spark-bar"><div class="spark-fill" style="width:69%;"></div></div>
+              </div>
+            </div>
+            <div class="screen-hero-text" style="margin-top:8px;">
+              StockFlow traduz movimentações diárias em um painel executivo orientado a decisão: produtividade, deslocamentos e layout do depósito em uma única visão estratégica.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const navItems = document.querySelectorAll('.nav-item');
+    const screens = {
+      dashboard: document.getElementById('screen-dashboard'),
+      busca: document.getElementById('screen-busca'),
+      navegacao: document.getElementById('screen-navegacao'),
+      waze: document.getElementById('screen-waze'),
+      ia: document.getElementById('screen-ia'),
+      gestao: document.getElementById('screen-gestao'),
+    };
+
+    function showScreen(key) {
+      Object.values(screens).forEach((s) => s.classList.remove('active'));
+      if (screens[key]) screens[key].classList.add('active');
+      navItems.forEach((item) => {
+        if (item.dataset.screen === key) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    navItems.forEach((item) => {
+      item.addEventListener('click', () => showScreen(item.dataset.screen));
+    });
+
+    document.querySelectorAll('[data-screen-link]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.screenLink;
+        showScreen(target);
+      });
+    });
+
+    // Fluxo rápido: buscar produto no header leva à Tela de Busca
+    document.getElementById('global-search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        showScreen('busca');
+        const productInput = document.getElementById('product-search');
+        if (productInput && e.target.value) {
+          productInput.value = e.target.value;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

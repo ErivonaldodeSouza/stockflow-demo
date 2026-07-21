@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>StockFlow - Inteligência Logística para Estoques</title>
   <style>
     :root {
@@ -1118,6 +1118,117 @@
       color: #0B4F6C;
       font-weight: 600;
     }
+
+    @media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    height: auto;
+    padding: 12px 14px;
+    border-radius: 0;
+  }
+
+  .sidebar-header h1,
+  .sidebar-header span,
+  .sidebar-section-label,
+  .sidebar-footer {
+    display: none !important;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  .main {
+    padding: 14px !important;
+  }
+
+  .topbar,
+  .topbar-left,
+  .topbar-right,
+  .surface-header,
+  .section-heading,
+  .compare-shell,
+  .map-legend,
+  .route-alert {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  .layout-grid,
+  .split,
+  .map-grid,
+  .route-form,
+  .metric-grid,
+  .kpi-large,
+  .indicator-grid,
+  .ai-callout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .indicator-grid,
+  .metric-grid,
+  .kpi-large {
+    gap: 10px;
+  }
+
+  .surface,
+  .map-shell,
+  .heatmap-shell,
+  .recommendation {
+    padding: 12px;
+  }
+
+  .btn,
+  .tab-pill,
+  .chip {
+    min-height: 44px;
+  }
+
+  .table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 10px;
+  }
+
+  .mini-map,
+  .heatmap-shell {
+    overflow-x: auto;
+  }
+}
   </style>
 </head>
 <body>
@@ -2030,6 +2141,54 @@
         }
       }
     });
+
+    document.addEventListener('DOMContentLoaded', () => {
+  const navItems = document.querySelectorAll('.nav-item');
+  const screens = {
+    dashboard: document.getElementById('screen-dashboard'),
+    busca: document.getElementById('screen-busca'),
+    navegacao: document.getElementById('screen-navegacao'),
+    waze: document.getElementById('screen-waze'),
+    ia: document.getElementById('screen-ia'),
+    gestao: document.getElementById('screen-gestao'),
+  };
+
+  function showScreen(key) {
+    Object.values(screens).forEach(s => s && s.classList.remove('active'));
+    if (screens[key]) screens[key].classList.add('active');
+
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.screen === key);
+    });
+
+    const activeScreen = screens[key];
+    if (activeScreen) {
+      activeScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => showScreen(item.dataset.screen));
+  });
+
+  document.querySelectorAll('[data-screen-link]').forEach(btn => {
+    btn.addEventListener('click', () => showScreen(btn.dataset.screenLink));
+  });
+
+  const globalSearch = document.getElementById('global-search');
+  if (globalSearch) {
+    globalSearch.addEventListener('keydown', e => {
+      if (e.key === 'Enter') showScreen('busca');
+    });
+  }
+
+  const productSearch = document.getElementById('product-search');
+  if (globalSearch && productSearch) {
+    globalSearch.addEventListener('input', e => {
+      productSearch.value = e.target.value;
+    });
+  }
+});
   </script>
 </body>
 </html>

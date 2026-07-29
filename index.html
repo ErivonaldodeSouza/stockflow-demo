@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>StockFlow - Inteligência Logística para Estoques</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
       --blue-dark: #0B4F6C;
@@ -1268,6 +1269,10 @@
             <span class="nav-icon">📊</span>
             <span class="sidebar-label">Gestão Estratégica</span>
           </button>
+          <button class="nav-item" data-screen="qrcode">
+            <span class="nav-icon">📷</span>
+            <span class="sidebar-label">Ler QR Code</span>
+          </button>
         </nav>
       </div>
       <div class="sidebar-footer">
@@ -2094,55 +2099,41 @@
           </div>
         </div>
       </section>
+      <!-- Tela de Leitura de QR Code -->
+<section id="screen-qrcode" class="screen">
+  <div class="surface">
+    <div class="surface-header">
+      <div>
+        <h3>Leitor de QR Code</h3>
+        <span>Aponte a câmera para o QR Code do produto.</span>
+      </div>
+      <div class="badge">
+        <div class="badge-dot"></div>
+        <span>Câmera ao vivo</span>
+      </div>
+    </div>
+
+    <div class="section-row">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <!-- Área onde a câmera vai aparecer -->
+        <div id="qr-reader" style="width:300px;max-width:100%;"></div>
+
+        <div id="qr-result" style="font-size:12px;color:var(--text-muted);text-align:center;">
+          Aguardando leitura...
+        </div>
+
+        <button id="btn-stop-qr" class="btn btn-ghost" style="display:none;">
+          <span class="btn-icon">⏹</span>
+          Parar câmera
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
     </main>
   </div>
 
-  <script>
-    const navItems = document.querySelectorAll('.nav-item');
-    const screens = {
-      dashboard: document.getElementById('screen-dashboard'),
-      busca: document.getElementById('screen-busca'),
-      navegacao: document.getElementById('screen-navegacao'),
-      waze: document.getElementById('screen-waze'),
-      ia: document.getElementById('screen-ia'),
-      gestao: document.getElementById('screen-gestao'),
-    };
-
-    function showScreen(key) {
-      Object.values(screens).forEach((s) => s.classList.remove('active'));
-      if (screens[key]) screens[key].classList.add('active');
-      navItems.forEach((item) => {
-        if (item.dataset.screen === key) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
-      });
-    }
-
-    navItems.forEach((item) => {
-      item.addEventListener('click', () => showScreen(item.dataset.screen));
-    });
-
-    document.querySelectorAll('[data-screen-link]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.screenLink;
-        showScreen(target);
-      });
-    });
-
-    // Fluxo rápido: buscar produto no header leva à Tela de Busca
-    document.getElementById('global-search').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        showScreen('busca');
-        const productInput = document.getElementById('product-search');
-        if (productInput && e.target.value) {
-          productInput.value = e.target.value;
-        }
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
+<script>
   const navItems = document.querySelectorAll('.nav-item');
   const screens = {
     dashboard: document.getElementById('screen-dashboard'),
@@ -2151,44 +2142,107 @@
     waze: document.getElementById('screen-waze'),
     ia: document.getElementById('screen-ia'),
     gestao: document.getElementById('screen-gestao'),
+    qrcode: document.getElementById('screen-qrcode'),
   };
 
   function showScreen(key) {
-    Object.values(screens).forEach(s => s && s.classList.remove('active'));
+    Object.values(screens).forEach((s) => s.classList.remove('active'));
     if (screens[key]) screens[key].classList.add('active');
-
-    navItems.forEach(item => {
-      item.classList.toggle('active', item.dataset.screen === key);
+    navItems.forEach((item) => {
+      if (item.dataset.screen === key) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
     });
 
-    const activeScreen = screens[key];
-    if (activeScreen) {
-      activeScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Se for a tela de QR Code, inicia a câmera
+    if (key === 'qrcode') {
+      startQrScanner();
+    } else {
+      stopQrScanner();
     }
   }
 
-  navItems.forEach(item => {
+  navItems.forEach((item) => {
     item.addEventListener('click', () => showScreen(item.dataset.screen));
   });
 
-  document.querySelectorAll('[data-screen-link]').forEach(btn => {
-    btn.addEventListener('click', () => showScreen(btn.dataset.screenLink));
+  document.querySelectorAll('[data-screen-link]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.screenLink;
+      showScreen(target);
+    });
   });
 
-  const globalSearch = document.getElementById('global-search');
-  if (globalSearch) {
-    globalSearch.addEventListener('keydown', e => {
-      if (e.key === 'Enter') showScreen('busca');
-    });
+  document.getElementById('global-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      showScreen('busca');
+      const productInput = document.getElementById('product-search');
+      if (productInput && e.target.value) {
+        productInput.value = e.target.value;
+      }
+    }
+  });
+
+  // --- Lógica do QR Code ---
+  let html5QrcodeScanner = null;
+
+  function onScanSuccess(decodedText, decodedResult) {
+    const resultDiv = document.getElementById('qr-result');
+    if (resultDiv) {
+      resultDiv.innerHTML = `
+        <div style="font-weight:600;color:#0B4F6C;">QR Code lido:</div>
+        <div style="margin-top:4px;">${decodedText}</div>
+        <div style="margin-top:6px;font-size:11px;">Produto: <strong>${decodedText}</strong></div>
+      `;
+    }
+    // Opcional: aqui você pode buscar automaticamente o produto no sistema
+    // usando decodedText como código.
   }
 
-  const productSearch = document.getElementById('product-search');
-  if (globalSearch && productSearch) {
-    globalSearch.addEventListener('input', e => {
-      productSearch.value = e.target.value;
-    });
+  function onScanError(errorMessage) {
+    // Normalmente ignoramos erros contínuos de leitura.
+    // console.warn('QR Scan error:', errorMessage);
   }
-});
-  </script>
+
+  function startQrScanner() {
+    if (html5QrcodeScanner) return; // já está rodando
+
+    const readerDiv = document.getElementById('qr-reader');
+    if (!readerDiv) return;
+
+    html5QrcodeScanner = new Html5QrcodeScanner(
+      'qr-reader',
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      },
+      /* verbose= */ false
+    );
+
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+
+    // Esconder botão de parar até que a câmera esteja ativa
+    const btnStop = document.getElementById('btn-stop-qr');
+    if (btnStop) {
+      btnStop.style.display = 'inline-flex';
+      btnStop.addEventListener('click', () => {
+        stopQrScanner();
+        btnStop.style.display = 'none';
+      });
+    }
+  }
+
+  function stopQrScanner() {
+    if (html5QrcodeScanner) {
+      html5QrcodeScanner.clear().then(() => {
+        html5QrcodeScanner = null;
+      }).catch(() => {
+        html5QrcodeScanner = null;
+      });
+    }
+  }
+</script>
 </body>
 </html>

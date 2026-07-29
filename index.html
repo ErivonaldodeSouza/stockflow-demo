@@ -2185,64 +2185,100 @@
     }
   });
 
-  // --- Lógica do QR Code ---
-  let html5QrcodeScanner = null;
+// --- Lógica do QR Code ---
+let html5QrcodeScanner = null;
 
-  function onScanSuccess(decodedText, decodedResult) {
-    const resultDiv = document.getElementById('qr-result');
-    if (resultDiv) {
-      resultDiv.innerHTML = `
-        <div style="font-weight:600;color:#0B4F6C;">QR Code lido:</div>
-        <div style="margin-top:4px;">${decodedText}</div>
-        <div style="margin-top:6px;font-size:11px;">Produto: <strong>${decodedText}</strong></div>
-      `;
-    }
-    // Opcional: aqui você pode buscar automaticamente o produto no sistema
-    // usando decodedText como código.
+function onScanSuccess(decodedText, decodedResult) {
+  const resultDiv = document.getElementById('qr-result');
+  if (resultDiv) {
+    resultDiv.innerHTML = `
+      <div style="font-weight:600;color:#0B4F6C;">QR Code lido:</div>
+      <div style="margin-top:4px;">${decodedText}</div>
+      <div style="margin-top:6px;font-size:11px;">Buscando produto: <strong>${decodedText}</strong>...</div>
+    `;
   }
-
-  function onScanError(errorMessage) {
-    // Normalmente ignoramos erros contínuos de leitura.
-    // console.warn('QR Scan error:', errorMessage);
+  
+  // Preencher campo de busca e ir para tela de busca
+  const productSearch = document.getElementById('product-search');
+  const globalSearch = document.getElementById('global-search');
+  
+  if (productSearch) {
+    productSearch.value = decodedText;
   }
-
-  function startQrScanner() {
-    if (html5QrcodeScanner) return; // já está rodando
-
-    const readerDiv = document.getElementById('qr-reader');
-    if (!readerDiv) return;
-
-    html5QrcodeScanner = new Html5QrcodeScanner(
-      'qr-reader',
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      },
-      /* verbose= */ false
-    );
-
-    html5QrcodeScanner.render(onScanSuccess, onScanError);
-
-    // Esconder botão de parar até que a câmera esteja ativa
+  if (globalSearch) {
+    globalSearch.value = decodedText;
+  }
+  
+  // Navegar para tela de busca
+  showScreen('busca');
+  
+  // Parar câmera após leitura
+  setTimeout(() => {
+    stopQrScanner();
     const btnStop = document.getElementById('btn-stop-qr');
-    if (btnStop) {
-      btnStop.style.display = 'inline-flex';
-      btnStop.addEventListener('click', () => {
-        stopQrScanner();
-        btnStop.style.display = 'none';
-      });
-    }
-  }
+    if (btnStop) btnStop.style.display = 'none';
+  }, 1000);
+}
 
-  function stopQrScanner() {
-    if (html5QrcodeScanner) {
-      html5QrcodeScanner.clear().then(() => {
-        html5QrcodeScanner = null;
-      }).catch(() => {
-        html5QrcodeScanner = null;
-      });
-    }
+function onScanError(errorMessage) {
+  // Ignorar erros contínuos
+}
+
+function startQrScanner() {
+  if (html5QrcodeScanner) return;
+
+  const readerDiv = document.getElementById('qr-reader');
+  if (!readerDiv) return;
+
+  html5QrcodeScanner = new Html5QrcodeScanner(
+    'qr-reader',
+    {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+    },
+    false
+  );
+
+  html5QrcodeScanner.render(onScanSuccess, onScanError);
+
+  const btnStop = document.getElementById('btn-stop-qr');
+  if (btnStop) {
+    btnStop.style.display = 'inline-flex';
+    btnStop.addEventListener('click', () => {
+      stopQrScanner();
+      btnStop.style.display = 'none';
+    });
   }
+}
+
+function stopQrScanner() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().then(() => {
+      html5QrcodeScanner = null;
+    }).catch(() => {
+      html5QrcodeScanner = null;
+    });
+  }
+}
+
+// Modificar showScreen para controlar câmera
+function showScreen(key) {
+  Object.values(screens).forEach((s) => s.classList.remove('active'));
+  if (screens[key]) screens[key].classList.add('active');
+  navItems.forEach((item) => {
+    if (item.dataset.screen === key) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  if (key === 'qrcode') {
+    startQrScanner();
+  } else {
+    stopQrScanner();
+  }
+}
 </script>
 </body>
 </html>
